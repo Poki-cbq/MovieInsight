@@ -234,12 +234,13 @@ async function loadStats() {
   try {
     const res = await fetchStats();
     stats.value = res.data.data;
+    // 必须先结束 loading，让 v-else 分支渲染出图表 DOM，再初始化 ECharts
+    loading.value = false;
     await nextTick();
     initCharts();
   } catch {
-    // 错误提示由 axios 拦截器统一处理
-  } finally {
     loading.value = false;
+    // 错误提示由 axios 拦截器统一处理
   }
 }
 
