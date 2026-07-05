@@ -27,11 +27,11 @@
         <!-- 海报 -->
         <div class="poster-section">
           <img
-            v-if="movie.poster_path"
+            v-if="movie.poster_path && !posterFailed"
             :src="getPosterUrl(movie.poster_path)"
             :alt="movie.title"
             class="detail-poster"
-            @error="handleImageError"
+            @error="() => (posterFailed = true)"
           />
           <div v-else class="movie-poster-placeholder" style="width: 300px">
             <el-icon :size="64"><VideoCamera /></el-icon>
@@ -144,7 +144,6 @@
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ArrowLeft, VideoCamera, User } from "@element-plus/icons-vue";
-import { ElMessage } from "element-plus";
 import { fetchMovieDetail } from "../api";
 
 const route = useRoute();
@@ -166,10 +165,7 @@ function toStarRating(voteAverage) {
   return voteAverage / 2;
 }
 
-function handleImageError(e) {
-  e.target.style.display = "none";
-  e.target.nextElementSibling && (e.target.nextElementSibling.style.display = "flex");
-}
+const posterFailed = ref(false);
 
 function formatRuntime(minutes) {
   if (!minutes) return "";
@@ -202,9 +198,8 @@ async function loadDetail() {
   } catch (err) {
     if (err.response?.status === 404) {
       movie.value = null;
-    } else {
-      ElMessage.error("加载电影详情失败");
     }
+    // 其他错误提示由 axios 拦截器统一处理
   } finally {
     loading.value = false;
   }
@@ -360,5 +355,24 @@ onMounted(() => {
 
 .empty-state {
   padding: 80px 0;
+}
+
+/* 响应式：小屏上下布局 */
+@media (max-width: 768px) {
+  .detail-layout {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .detail-poster {
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .movie-poster-placeholder {
+    width: 100% !important;
+    max-width: 300px;
+    aspect-ratio: 2 / 3;
+  }
 }
 </style>

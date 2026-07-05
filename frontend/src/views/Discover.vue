@@ -89,12 +89,12 @@
           @click="goDetail(movie.id)"
         >
           <img
-            v-if="movie.poster_path"
+            v-if="movie.poster_path && !failedImages.has(movie.id)"
             :src="getPosterUrl(movie.poster_path)"
             :alt="movie.title"
             class="movie-poster"
             loading="lazy"
-            @error="handleImageError"
+            @error="() => failedImages.add(movie.id)"
           />
           <div v-else class="movie-poster-placeholder">
             <el-icon><VideoCamera /></el-icon>
@@ -154,7 +154,6 @@
 import { reactive, ref, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { Search, SortUp, SortDown, VideoCamera } from "@element-plus/icons-vue";
-import { ElMessage } from "element-plus";
 import { fetchMovies, fetchGenres, fetchYears, fetchCountries } from "../api";
 
 const router = useRouter();
@@ -199,19 +198,7 @@ function toStarRating(voteAverage) {
   return voteAverage / 2;
 }
 
-function handleImageError(e) {
-  e.target.style.display = "none";
-  const placeholder = e.target.nextElementSibling;
-  if (placeholder && placeholder.classList.contains("movie-poster-placeholder")) {
-    placeholder.style.display = "flex";
-  } else {
-    // 如果 img 后面没有占位 div（v-if 分支），原地创建一个
-    const div = document.createElement("div");
-    div.className = "movie-poster-placeholder";
-    div.innerHTML = "<span style='font-size:48px'>🎬</span>";
-    e.target.parentElement.insertBefore(div, e.target.nextSibling);
-  }
-}
+const failedImages = reactive(new Set());
 
 // ---------------------------------------------------------------------------
 // 数据请求
@@ -235,7 +222,7 @@ async function loadMovies() {
     total.value = res.data.total;
     totalPages.value = res.data.total_pages;
   } catch {
-    ElMessage.error("加载电影列表失败，请确认后端已启动");
+    // 错误提示由 axios 拦截器统一处理
   } finally {
     loading.value = false;
   }
@@ -419,6 +406,11 @@ onMounted(() => {
 @media (max-width: 900px) {
   .card-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .card-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

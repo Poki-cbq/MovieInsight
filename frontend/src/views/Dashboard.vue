@@ -64,7 +64,6 @@
 import { ref, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import * as echarts from "echarts";
 import { fetchStats } from "../api";
-import { ElMessage } from "element-plus";
 
 // ---------------------------------------------------------------------------
 // 数据
@@ -234,7 +233,7 @@ async function loadStats() {
     await nextTick();
     initCharts();
   } catch {
-    ElMessage.error("加载统计数据失败");
+    // 错误提示由 axios 拦截器统一处理
   } finally {
     loading.value = false;
   }
