@@ -1,0 +1,175 @@
+/* =========================================================================
+   CSS 变量 — TMDB 配色
+   ========================================================================= */
+:root {
+  --tmdb-dark-blue: #0d253f;
+  --tmdb-light-blue: #01b4e4;
+  --tmdb-lighter-blue: #90cea1;
+  --score-high: #21d07a;
+  --score-mid: #d2d531;
+  --score-low: #db2360;
+  --sidebar-width: 200px;
+  --footer-height: 48px;
+}
+
+/* =========================================================================
+   全局重置
+   ========================================================================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Microsoft YaHei",
+    Arial, sans-serif;
+  background: #f5f5f5;
+  color: #333;
+}
+
+/* =========================================================================
+   应用根布局：侧边栏 + 右侧内容区
+   ========================================================================= */
+#app {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* 侧边栏 */
+.app-sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  background: var(--tmdb-dark-blue);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 100;
+}
+
+.app-sidebar .logo {
+  padding: 24px 20px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.app-sidebar .el-menu {
+  border-right: none;
+  background: transparent;
+}
+
+.app-sidebar .el-menu-item {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 15px;
+}
+
+.app-sidebar .el-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.app-sidebar .el-menu-item.is-active {
+  color: var(--tmdb-light-blue);
+  background: rgba(1, 180, 228, 0.12);
+}
+
+/* 主内容区 */
+.app-main {
+  margin-left: var(--sidebar-width);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-content {
+  flex: 1;
+  padding: 24px;
+  padding-bottom: calc(var(--footer-height) + 24px);
+}
+
+/* 页脚 */
+.app-footer {
+  height: var(--footer-height);
+  background: var(--tmdb-dark-blue);
+  color: rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  gap: 24px;
+  position: fixed;
+  bottom: 0;
+  left: var(--sidebar-width);
+  right: 0;
+  z-index: 50;
+}
+
+.app-footer a {
+  color: var(--tmdb-light-blue);
+  text-decoration: none;
+}
+
+.app-footer a:hover {
+  text-decoration: underline;
+}
+
+/* =========================================================================
+   海报图片
+   ========================================================================= */
+.movie-poster {
+  width: 100%;
+  border-radius: 6px;
+  display: block;
+  object-fit: cover;
+  aspect-ratio: 2 / 3;
+  background: #e0e0e0;
+}
+
+.movie-poster-placeholder {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: 6px;
+  background: #e8e8e8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #bbb;
+  font-size: 48px;
+}
+
+/* =========================================================================
+   评分颜色
+   ========================================================================= */
+.score-high {
+  color: var(--score-high);
+  font-weight: 700;
+}
+.score-mid {
+  color: var(--score-mid);
+  font-weight: 700;
+}
+.score-low {
+  color: var(--score-low);
+  font-weight: 700;
+}
+
+/* =========================================================================
+   滚动条
+   ========================================================================= */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f0f0f0;
+}
+::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+  border-radius: 3px;
+}
