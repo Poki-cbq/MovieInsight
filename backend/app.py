@@ -15,7 +15,9 @@ def create_app(config_class=Config):
 
     # 注册蓝图
     from api.health import health_bp
+    from api.movies import movies_bp
     app.register_blueprint(health_bp)
+    app.register_blueprint(movies_bp)
 
     # 自动建表
     with app.app_context():
