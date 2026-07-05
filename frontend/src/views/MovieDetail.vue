@@ -28,9 +28,10 @@
         <div class="poster-section">
           <img
             v-if="movie.poster_path && !posterFailed"
-            :src="getPosterUrl(movie.poster_path)"
+            :src="getPosterUrl(movie.poster_path, movie.source)"
             :alt="movie.title"
             class="detail-poster"
+            referrerpolicy="no-referrer"
             @error="() => (posterFailed = true)"
           />
           <div v-else class="movie-poster-placeholder" style="width: 300px">
@@ -42,6 +43,13 @@
         <div class="info-section">
           <h1 class="movie-title">
             {{ movie.title }}
+            <el-tag
+              size="small"
+              :type="movie.source === 'douban' ? 'success' : ''"
+              :style="movie.source === 'douban' ? 'margin-left:8px' : 'margin-left:8px;background:#01b4e4;border-color:#01b4e4;color:#fff'"
+            >
+              {{ movie.source === 'douban' ? '豆瓣' : 'TMDB' }}
+            </el-tag>
             <span class="original-title" v-if="movie.original_title && movie.original_title !== movie.title">
               {{ movie.original_title }}
             </span>
@@ -65,6 +73,9 @@
               class="rating-number"
             >
               {{ movie.vote_average?.toFixed(1) }} / 10
+            </span>
+            <span v-if="movie.source === 'douban' && movie.douban_rating" class="douban-rating">
+              豆瓣 {{ movie.douban_rating }}
             </span>
             <span class="vote-count">{{ movie.vote_count?.toLocaleString() }} 票</span>
           </div>
@@ -111,30 +122,36 @@
       </div>
 
       <!-- 演职表 -->
-      <div class="credits-section" v-if="directors.length || actors.length">
-        <h3>演职表</h3>
-        <el-table :data="tableData" stripe style="width: 100%; margin-top: 12px" :border="false">
-          <el-table-column label="" width="60">
-            <template #default="{ row }">
-              <img
-                v-if="row.profile_path"
-                :src="`https://image.tmdb.org/t/p/w92${row.profile_path}`"
-                class="credit-avatar"
-                @error="(e) => (e.target.style.display = 'none')"
-              />
-              <div v-else class="credit-avatar-placeholder">
-                <el-icon><User /></el-icon>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column prop="name" label="姓名" width="200" />
-          <el-table-column label="角色/职位">
-            <template #default="{ row }">
-              <el-tag v-if="row.type === 'director'" type="danger" size="small">导演</el-tag>
-              <span v-else>{{ row.role }}</span>
-            </template>
-          </el-table-column>
-        </el-table>
+      <div class="credits-section">
+        <template v-if="directors.length || actors.length">
+          <h3>演职表</h3>
+          <el-table :data="tableData" stripe style="width: 100%; margin-top: 12px" :border="false">
+            <el-table-column label="" width="60">
+              <template #default="{ row }">
+                <img
+                  v-if="row.profile_path"
+                  :src="`https://image.tmdb.org/t/p/w92${row.profile_path}`"
+                  class="credit-avatar"
+                  @error="(e) => (e.target.style.display = 'none')"
+                />
+                <div v-else class="credit-avatar-placeholder">
+                  <el-icon><User /></el-icon>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column prop="name" label="姓名" width="200" />
+            <el-table-column label="角色/职位">
+              <template #default="{ row }">
+                <el-tag v-if="row.type === 'director'" type="danger" size="small">导演</el-tag>
+                <span v-else>{{ row.role }}</span>
+              </template>
+            </el-table-column>
+          </el-table>
+        </template>
+        <template v-else-if="movie.source === 'douban'">
+          <h3>演职表</h3>
+          <p class="no-credits">暂无演职人员数据（豆瓣数据源）</p>
+        </template>
       </div>
     </template>
   </div>
@@ -155,8 +172,11 @@ const loading = ref(false);
 // ---------------------------------------------------------------------------
 // 工具函数
 // ---------------------------------------------------------------------------
-function getPosterUrl(path) {
+function getPosterUrl(path, source) {
   if (!path) return "";
+  // 豆瓣数据存的是完整 URL，直接返回
+  if (source === "douban" && path.startsWith("http")) return path;
+  // TMDB 数据拼接 CDN URL
   return `https://image.tmdb.org/t/p/w500${path}`;
 }
 
@@ -362,6 +382,19 @@ watch(
   align-items: center;
   justify-content: center;
   color: #bbb;
+}
+
+.douban-rating {
+  font-size: 14px;
+  color: #21d07a;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.no-credits {
+  color: #999;
+  font-size: 14px;
+  padding: 20px 0;
 }
 
 .empty-state {

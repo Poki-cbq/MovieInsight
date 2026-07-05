@@ -39,6 +39,14 @@
           <div class="stat-value">{{ stats.avg_rating }}</div>
           <div class="stat-label">平均评分</div>
         </div>
+        <div class="stat-card stat-card--tmdb">
+          <div class="stat-value">{{ tmdbCount }}</div>
+          <div class="stat-label">TMDB 来源</div>
+        </div>
+        <div class="stat-card stat-card--douban">
+          <div class="stat-value">{{ doubanCount }}</div>
+          <div class="stat-label">豆瓣 来源</div>
+        </div>
       </div>
 
       <!-- 图表 -->
@@ -55,13 +63,17 @@
           <div class="chart-header">年代趋势</div>
           <div ref="yearChartRef" class="chart-body"></div>
         </div>
+        <div class="chart-card">
+          <div class="chart-header">数据来源</div>
+          <div ref="sourceChartRef" class="chart-body"></div>
+        </div>
       </div>
     </template>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import * as echarts from "echarts";
 import { fetchStats } from "../api";
 
@@ -75,10 +87,25 @@ const loading = ref(true);
 const ratingChartRef = ref(null);
 const genreChartRef = ref(null);
 const yearChartRef = ref(null);
+const sourceChartRef = ref(null);
 
 let ratingChart = null;
 let genreChart = null;
 let yearChart = null;
+let sourceChart = null;
+
+// 数据来源统计
+const tmdbCount = computed(() => {
+  if (!stats.value?.source_distribution) return 0;
+  const item = stats.value.source_distribution.find((s) => s.source === "tmdb");
+  return item ? item.count : 0;
+});
+
+const doubanCount = computed(() => {
+  if (!stats.value?.source_distribution) return 0;
+  const item = stats.value.source_distribution.find((s) => s.source === "douban");
+  return item ? item.count : 0;
+});
 
 // ---------------------------------------------------------------------------
 // 暗色主题默认色板
@@ -157,6 +184,34 @@ function buildGenreChart(data) {
           name: g.name,
           value: g.count,
           itemStyle: { color: DARK_COLORS[i % DARK_COLORS.length] },
+        })),
+      },
+    ],
+  });
+}
+
+function buildSourceChart(data) {
+  if (!sourceChart || !data?.length) return;
+  sourceChart.setOption({
+    tooltip: {
+      trigger: "item",
+      formatter: (p) => `${p.name}<br/>${p.value} 部 (${p.percent}%)`,
+    },
+    series: [
+      {
+        type: "pie",
+        radius: ["45%", "72%"],
+        center: ["50%", "55%"],
+        avoidLabelOverlap: false,
+        itemStyle: { borderRadius: 4, borderColor: "#1a1a2e", borderWidth: 3 },
+        label: { show: true, formatter: "{b}\n{d}%" },
+        emphasis: {
+          label: { fontSize: 16, fontWeight: "bold" },
+        },
+        data: data.map((s) => ({
+          name: s.source === "tmdb" ? "TMDB" : "豆瓣",
+          value: s.count,
+          itemStyle: { color: s.source === "tmdb" ? "#01b4e4" : "#21d07a" },
         })),
       },
     ],
@@ -250,20 +305,24 @@ function initCharts() {
   if (ratingChart) ratingChart.dispose();
   if (genreChart) genreChart.dispose();
   if (yearChart) yearChart.dispose();
+  if (sourceChart) sourceChart.dispose();
 
   ratingChart = makeChart(ratingChartRef.value);
   genreChart = makeChart(genreChartRef.value);
   yearChart = makeChart(yearChartRef.value);
+  sourceChart = makeChart(sourceChartRef.value);
 
   buildGenreChart(stats.value.genre_distribution);
   buildYearChart(stats.value.yearly_trend);
   buildRatingChart(stats.value.rating_distribution);
+  buildSourceChart(stats.value.source_distribution);
 }
 
 function handleResize() {
   ratingChart?.resize();
   genreChart?.resize();
   yearChart?.resize();
+  sourceChart?.resize();
 }
 
 // ---------------------------------------------------------------------------
@@ -279,6 +338,7 @@ onBeforeUnmount(() => {
   ratingChart?.dispose();
   genreChart?.dispose();
   yearChart?.dispose();
+  sourceChart?.dispose();
 });
 </script>
 
@@ -320,6 +380,14 @@ onBeforeUnmount(() => {
   font-size: 13px;
   color: #999;
   margin-top: 4px;
+}
+
+.stat-card--tmdb {
+  border-top: 3px solid #01b4e4;
+}
+
+.stat-card--douban {
+  border-top: 3px solid #21d07a;
 }
 
 /* 图表网格 */

@@ -11,22 +11,22 @@ class TestMovieList:
     """电影列表接口测试"""
 
     def test_basic_list(self, client, seed_data):
-        """T1: GET /api/movies — 返回全部 3 部电影"""
+        """T1: GET /api/movies — 返回全部 4 部电影"""
         resp = client.get("/api/movies")
         assert resp.status_code == 200
 
         body = resp.get_json()
-        assert len(body["data"]) == 3
-        assert body["total"] == 3
+        assert len(body["data"]) == 4
+        assert body["total"] == 4
 
     def test_pagination(self, client, seed_data):
-        """T2: 分页 per_page=1 — data 长度=1, total_pages=3"""
+        """T2: 分页 per_page=1 — data 长度=1, total_pages=4"""
         resp = client.get("/api/movies?per_page=1")
         assert resp.status_code == 200
 
         body = resp.get_json()
         assert len(body["data"]) == 1
-        assert body["total_pages"] == 3
+        assert body["total_pages"] == 4
 
     def test_filter_by_genre(self, client, seed_data):
         """T3: 筛选 genre=动作 — 仅返回《黑暗骑士》"""
@@ -38,21 +38,22 @@ class TestMovieList:
         assert body["data"][0]["title"] == "黑暗骑士"
 
     def test_filter_by_year_range(self, client, seed_data):
-        """T4: 筛选 year_start=1994, year_end=1994 — 仅返回《低俗小说》"""
+        """T4: 筛选 year_start=1994, year_end=1994 — 返回 2 部（低俗小说 + 肖申克的救赎）"""
         resp = client.get("/api/movies?year_start=1994&year_end=1994")
         assert resp.status_code == 200
 
         body = resp.get_json()
-        assert len(body["data"]) == 1
-        assert body["data"][0]["title"] == "低俗小说"
+        assert len(body["data"]) == 2
+        titles = {m["title"] for m in body["data"]}
+        assert titles == {"低俗小说", "肖申克的救赎"}
 
     def test_filter_by_country(self, client, seed_data):
-        """T5: 筛选 country=美国 — 返回全部 3 部"""
+        """T5: 筛选 country=美国 — 返回全部 4 部"""
         resp = client.get("/api/movies?country=美国")
         assert resp.status_code == 200
 
         body = resp.get_json()
-        assert len(body["data"]) == 3
+        assert len(body["data"]) == 4
 
     def test_search(self, client, seed_data):
         """T6: 搜索 search=搏击 — 仅返回《搏击俱乐部》"""
@@ -106,12 +107,12 @@ class TestStats:
     """Dashboard 统计接口测试"""
 
     def test_stats(self, client, seed_data):
-        """T10: GET /api/stats — 汇总 + 3 组分布数据"""
+        """T10: GET /api/stats — 汇总 + 4 组分布数据（含 source_distribution）"""
         resp = client.get("/api/stats")
         assert resp.status_code == 200
 
         data = resp.get_json()["data"]
-        assert data["total_movies"] == 3
+        assert data["total_movies"] == 4
         assert data["avg_rating"] > 0
         # 评分分布
         assert len(data["rating_distribution"]) > 0
@@ -119,6 +120,10 @@ class TestStats:
         assert len(data["genre_distribution"]) > 0
         # 年代趋势
         assert len(data["yearly_trend"]) > 0
+        # 数据来源分布
+        assert len(data["source_distribution"]) == 2
+        sources = {s["source"] for s in data["source_distribution"]}
+        assert sources == {"tmdb", "douban"}
 
 
 # ===================================================================
@@ -161,10 +166,42 @@ class TestHealth:
     """健康检查接口测试"""
 
     def test_health(self, client, seed_data):
-        """T14: GET /api/health — status=healthy, total_movies=3"""
+        """T14: GET /api/health — status=healthy, total_movies=4"""
         resp = client.get("/api/health")
         assert resp.status_code == 200
 
         body = resp.get_json()
         assert body["status"] == "healthy"
-        assert body["total_movies"] == 3
+        assert body["total_movies"] == 4
+
+
+# ===================================================================
+# v1.1 新增：豆瓣数据源测试
+# ===================================================================
+
+class TestDoubanSource:
+    """豆瓣数据源相关测试"""
+
+    def test_douban_movie_detail_no_credits(self, client, seed_data):
+        """T15: 豆瓣电影详情 — 无演职人员数据"""
+        # 第 4 部是豆瓣电影，id=4
+        resp = client.get("/api/movies/4")
+        assert resp.status_code == 200
+
+        movie = resp.get_json()["data"]
+        assert movie["title"] == "肖申克的救赎"
+        assert movie["source"] == "douban"
+        # 豆瓣电影无演职人员
+        assert len(movie["directors"]) == 0
+        assert len(movie["actors"]) == 0
+
+    def test_douban_movie_fields(self, client, seed_data):
+        """T16: 豆瓣电影 to_dict 包含 source/douban_id/douban_rating"""
+        resp = client.get("/api/movies/4")
+        assert resp.status_code == 200
+
+        movie = resp.get_json()["data"]
+        assert movie["source"] == "douban"
+        assert movie["tmdb_id"] is None
+        assert movie["douban_id"] == 1292052
+        assert movie["douban_rating"] == 9.7

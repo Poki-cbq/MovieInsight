@@ -101,6 +101,18 @@ def get_stats():
     ]
 
     # ------------------------------------------------------------------
+    # 4. 数据来源分布
+    # ------------------------------------------------------------------
+    source_rows = (
+        Movie.query.with_entities(Movie.source, func.count(Movie.id))
+        .group_by(Movie.source)
+        .all()
+    )
+    source_distribution = [
+        {"source": row[0], "count": row[1]} for row in source_rows
+    ]
+
+    # ------------------------------------------------------------------
     # 组装响应
     # ------------------------------------------------------------------
     return jsonify(
@@ -111,6 +123,7 @@ def get_stats():
                 "rating_distribution": rating_distribution,
                 "genre_distribution": genre_distribution,
                 "yearly_trend": yearly_trend,
+                "source_distribution": source_distribution,
             }
         }
     )

@@ -90,10 +90,11 @@
         >
           <img
             v-if="movie.poster_path && !failedImages.has(movie.id)"
-            :src="getPosterUrl(movie.poster_path)"
+            :src="getPosterUrl(movie.poster_path, movie.source)"
             :alt="movie.title"
             class="movie-poster"
             loading="lazy"
+            referrerpolicy="no-referrer"
             @error="() => failedImages.add(movie.id)"
           />
           <div v-else class="movie-poster-placeholder">
@@ -129,6 +130,15 @@
                 style="margin-right: 4px; margin-top: 4px"
               >
                 {{ g }}
+              </el-tag>
+            </div>
+            <div class="card-source">
+              <el-tag
+                size="small"
+                :type="movie.source === 'douban' ? 'success' : ''"
+                :style="movie.source === 'douban' ? '' : 'background:#01b4e4;border-color:#01b4e4;color:#fff'"
+              >
+                {{ movie.source === 'douban' ? '豆瓣' : 'TMDB' }}
               </el-tag>
             </div>
           </div>
@@ -188,8 +198,11 @@ const countryOptions = ref([]);
 // ---------------------------------------------------------------------------
 // 工具函数
 // ---------------------------------------------------------------------------
-function getPosterUrl(path) {
+function getPosterUrl(path, source) {
   if (!path) return "";
+  // 豆瓣数据存的是完整 URL，直接返回
+  if (source === "douban" && path.startsWith("http")) return path;
+  // TMDB 数据拼接 CDN URL
   return `https://image.tmdb.org/t/p/w500${path}`;
 }
 

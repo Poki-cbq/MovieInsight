@@ -6,7 +6,10 @@ class Movie(db.Model):
     __tablename__ = "movies"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    tmdb_id = db.Column(db.Integer, unique=True, nullable=False)
+    source = db.Column(db.String(16), default="tmdb")  # 'tmdb' | 'douban'
+    tmdb_id = db.Column(db.Integer, nullable=True, index=True)  # 豆瓣数据为 NULL
+    douban_id = db.Column(db.Integer, nullable=True, index=True)  # TMDB 数据为 NULL
+    douban_rating = db.Column(db.Float, nullable=True)  # 豆瓣评分（TMDB 数据为 NULL）
     title = db.Column(db.String(255), nullable=False)
     original_title = db.Column(db.String(255), default="")
     overview = db.Column(db.Text, default="")
@@ -32,7 +35,10 @@ class Movie(db.Model):
         """序列化为字典"""
         data = {
             "id": self.id,
+            "source": self.source,
             "tmdb_id": self.tmdb_id,
+            "douban_id": self.douban_id,
+            "douban_rating": self.douban_rating,
             "title": self.title,
             "original_title": self.original_title,
             "poster_path": self.poster_path,
