@@ -7,7 +7,9 @@
         placeholder="搜索电影名称..."
         clearable
         style="width: 240px"
-        @keyup.enter="handleSearch"
+        @input="handleSearch"
+        @clear="handleSearch"
+        @keyup.enter="filters.page = 1; loadMovies()"
       >
         <template #prefix>
           <el-icon><Search /></el-icon>
@@ -165,6 +167,7 @@ import { reactive, ref, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { Search, SortUp, SortDown, VideoCamera } from "@element-plus/icons-vue";
 import { fetchMovies, fetchGenres, fetchYears, fetchCountries } from "../api";
+import { getPosterUrl, toStarRating } from "../utils/movie";
 
 const router = useRouter();
 
@@ -195,22 +198,6 @@ const genreOptions = ref([]);
 const yearOptions = ref([]);
 const countryOptions = ref([]);
 
-// ---------------------------------------------------------------------------
-// 工具函数
-// ---------------------------------------------------------------------------
-function getPosterUrl(path, source) {
-  if (!path) return "";
-  // 豆瓣数据存的是完整 URL，直接返回
-  if (source === "douban" && path.startsWith("http")) return path;
-  // TMDB 数据拼接 CDN URL
-  return `https://image.tmdb.org/t/p/w500${path}`;
-}
-
-function toStarRating(voteAverage) {
-  if (!voteAverage) return 0;
-  return voteAverage / 2;
-}
-
 const failedImages = reactive(new Set());
 
 // ---------------------------------------------------------------------------
@@ -218,9 +205,24 @@ const failedImages = reactive(new Set());
 // ---------------------------------------------------------------------------
 let requestSeq = 0;
 
+// ---------------------------------------------------------------------------
+// 搜索防抖
+// ---------------------------------------------------------------------------
+let searchTimer = null;
+const DEBOUNCE_MS = 300;
+
+function handleSearch() {
+  if (searchTimer) clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    filters.page = 1;
+    loadMovies();
+  }, DEBOUNCE_MS);
+}
+
 async function loadMovies() {
   loading.value = true;
   const seq = ++requestSeq;
+  failedImages.clear();  // 每次加载新数据时重置，防止内存泄漏
   try {
     const params = {};
     if (filters.page > 1) params.page = filters.page;
@@ -266,11 +268,6 @@ async function loadFilterOptions() {
 // ---------------------------------------------------------------------------
 // 事件处理
 // ---------------------------------------------------------------------------
-function handleSearch() {
-  filters.page = 1;
-  loadMovies();
-}
-
 function toggleOrder() {
   filters.order = filters.order === "asc" ? "desc" : "asc";
   filters.page = 1;

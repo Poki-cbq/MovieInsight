@@ -1,9 +1,20 @@
+import logging
 import os
 
 from flask import Flask
+from flask_caching import Cache
 from flask_cors import CORS
 from config import Config
 from models import db
+
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+
+cache = Cache()
 
 
 def create_app(config_class=Config):
@@ -11,8 +22,13 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    # 缓存配置（内存缓存，适合单机部署）
+    app.config.setdefault("CACHE_TYPE", "SimpleCache")
+    app.config.setdefault("CACHE_DEFAULT_TIMEOUT", 600)  # 10 分钟
+
     # 初始化扩展
     CORS(app)
+    cache.init_app(app)
     db.init_app(app)
 
     # 注册蓝图

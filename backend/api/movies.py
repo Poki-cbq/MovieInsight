@@ -1,10 +1,12 @@
 """Movies API — 分页、筛选、排序、搜索 / 电影详情 / 枚举接口"""
 
+import re
 from collections import Counter
 
-from flask import Blueprint, jsonify, request
-from sqlalchemy import extract, func
+from flask import Blueprint, abort, jsonify, request
+from sqlalchemy import or_
 
+from app import cache
 from models import db
 from models.database import Movie, Credit
 
@@ -38,19 +40,47 @@ def _parse_pagination():
     return page, per_page
 
 
+def _exact_genre_match(column, genre):
+    """精确匹配逗号分隔列表中的类型（避免子串误匹配）。
+
+    例如搜索 "剧" 不会匹配到 "剧情"、"喜剧"；只匹配完整 token。
+    """
+    return or_(
+        column == genre,
+        column.like(f"{genre},%"),
+        column.like(f"%,{genre},%"),
+        column.like(f"%,{genre}"),
+    )
+
+
+def _validate_year(val, label):
+    """校验年份参数，合法返回 int 年份，非法返回 None 并设置错误。"""
+    if not val:
+        return None
+    if not re.match(r"^\d{4}$", val):
+        abort(400, description=f"{label} 格式错误，需要 4 位数字年份，如 2024")
+    year = int(val)
+    if year < 1870 or year > 2100:
+        abort(400, description=f"{label} 年份超出合理范围 (1870-2100)")
+    return year
+
+
 def _apply_filters(query, model=Movie):
     """在 query 上叠加 genre / year / country / search 过滤。"""
     genre = request.args.get("genre", "").strip()
-    year_start = request.args.get("year_start", "").strip()
-    year_end = request.args.get("year_end", "").strip()
+    year_start_raw = request.args.get("year_start", "").strip()
+    year_end_raw = request.args.get("year_end", "").strip()
     country = request.args.get("country", "").strip()
     search = request.args.get("search", "").strip()
 
+    year_start = _validate_year(year_start_raw, "year_start")
+    year_end = _validate_year(year_end_raw, "year_end")
+
     if genre:
-        query = query.filter(model.genres.contains(genre))
-    if year_start:
+        query = query.filter(_exact_genre_match(model.genres, genre))
+    if year_start is not None:
         query = query.filter(model.release_date >= f"{year_start}-01-01")
-    if year_end:
+    if year_end is not None:
         query = query.filter(model.release_date <= f"{year_end}-12-31")
     if country:
         query = query.filter(model.production_countries.contains(country))
@@ -108,7 +138,7 @@ def get_movies():
 @movies_bp.route("/api/movies/<int:movie_id>", methods=["GET"])
 def get_movie_detail(movie_id):
     """获取电影详情，包含导演和前 10 位演员。"""
-    movie = Movie.query.get(movie_id)
+    movie = db.session.get(Movie, movie_id)
     if not movie:
         return jsonify({"error": "电影不存在"}), 404
 
@@ -141,6 +171,7 @@ def get_movie_detail(movie_id):
 # GET /api/genres  —  类型列表 + 每类数量
 # ===================================================================
 @movies_bp.route("/api/genres", methods=["GET"])
+@cache.cached(timeout=600)
 def get_genres():
     """获取所有电影类型及各自数量。"""
     rows = Movie.query.with_entities(Movie.genres).all()
@@ -166,6 +197,7 @@ def get_genres():
 # GET /api/years  —  年份列表 + 每年数量
 # ===================================================================
 @movies_bp.route("/api/years", methods=["GET"])
+@cache.cached(timeout=600)
 def get_years():
     """获取所有上映年份及各自数量。"""
     rows = Movie.query.with_entities(Movie.release_date).all()
@@ -189,6 +221,7 @@ def get_years():
 # GET /api/countries  —  国家列表 + 每国数量
 # ===================================================================
 @movies_bp.route("/api/countries", methods=["GET"])
+@cache.cached(timeout=600)
 def get_countries():
     """获取所有制片国家及各自数量。"""
     rows = Movie.query.with_entities(Movie.production_countries).all()

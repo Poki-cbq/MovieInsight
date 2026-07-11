@@ -130,7 +130,7 @@
               <template #default="{ row }">
                 <img
                   v-if="row.profile_path"
-                  :src="`https://image.tmdb.org/t/p/w92${row.profile_path}`"
+                  :src="getProfileUrl(row.profile_path)"
                   class="credit-avatar"
                   @error="(e) => (e.target.style.display = 'none')"
                 />
@@ -162,6 +162,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ArrowLeft, VideoCamera, User } from "@element-plus/icons-vue";
 import { fetchMovieDetail } from "../api";
+import { getPosterUrl, getProfileUrl, toStarRating, formatRuntime, formatMoney } from "../utils/movie";
 
 const route = useRoute();
 const router = useRouter();
@@ -169,38 +170,7 @@ const router = useRouter();
 const movie = ref(null);
 const loading = ref(false);
 
-// ---------------------------------------------------------------------------
-// 工具函数
-// ---------------------------------------------------------------------------
-function getPosterUrl(path, source) {
-  if (!path) return "";
-  // 豆瓣数据存的是完整 URL，直接返回
-  if (source === "douban" && path.startsWith("http")) return path;
-  // TMDB 数据拼接 CDN URL
-  return `https://image.tmdb.org/t/p/w500${path}`;
-}
-
-function toStarRating(voteAverage) {
-  if (!voteAverage) return 0;
-  return voteAverage / 2;
-}
-
 const posterFailed = ref(false);
-
-function formatRuntime(minutes) {
-  if (!minutes) return "";
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h > 0) return `${h}h ${m}min`;
-  return `${m}min`;
-}
-
-function formatMoney(amount) {
-  if (!amount) return "—";
-  if (amount >= 1_000_000_000) return `$${(amount / 1_000_000_000).toFixed(1)}B`;
-  if (amount >= 1_000_000) return `$${Math.round(amount / 1_000_000)}M`;
-  return `$${amount.toLocaleString()}`;
-}
 
 function goBack() {
   router.back();

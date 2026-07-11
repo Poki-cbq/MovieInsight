@@ -1,6 +1,10 @@
+import logging
 import time
+
 import requests
 from config import Config, GENRE_MAP, COUNTRY_MAP
+
+logger = logging.getLogger(__name__)
 
 
 class TMDBService:
@@ -27,7 +31,7 @@ class TMDBService:
             resp.raise_for_status()
             return resp.json()
         except requests.exceptions.RequestException as e:
-            print(f"  [API ERROR] {url}: {e}")
+            logger.error("[API ERROR] %s: %s", url, e)
             return None
 
     # ========== 电影列表 ==========

@@ -33,6 +33,12 @@ class Movie(db.Model):
 
     def to_dict(self, include_overview=True):
         """序列化为字典"""
+        # 缓存 split 结果，避免每次调用重复计算
+        if "_cached_genres" not in self.__dict__:
+            self._cached_genres = self.genres.split(",") if self.genres else []
+        if "_cached_countries" not in self.__dict__:
+            self._cached_countries = self.production_countries.split(",") if self.production_countries else []
+
         data = {
             "id": self.id,
             "source": self.source,
@@ -42,7 +48,6 @@ class Movie(db.Model):
             "title": self.title,
             "original_title": self.original_title,
             "poster_path": self.poster_path,
-            "backdrop_path": self.backdrop_path,
             "release_date": self.release_date,
             "runtime": self.runtime,
             "vote_average": self.vote_average,
@@ -52,8 +57,8 @@ class Movie(db.Model):
             "revenue": self.revenue,
             "original_language": self.original_language,
             "tagline": self.tagline,
-            "genres": self.genres.split(",") if self.genres else [],
-            "production_countries": self.production_countries.split(",") if self.production_countries else [],
+            "genres": self._cached_genres,
+            "production_countries": self._cached_countries,
         }
         if include_overview:
             data["overview"] = self.overview
@@ -73,7 +78,7 @@ class Credit(db.Model):
     credit_type = db.Column(db.String(16), default="cast")
     department = db.Column(db.String(64), default="")
     popularity = db.Column(db.Float, default=0.0)
-    order = db.Column("`order`", db.Integer, default=0)
+    order = db.Column("order", db.Integer, default=0)
 
     def to_dict(self):
         return {
